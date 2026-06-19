@@ -4,6 +4,10 @@ Sistema web corporativo interno para controle de **contas a receber comerciais**
 
 > **Status:** Fases 1–12 concluídas — pronto para deploy via Coolify (aguardando aprovação operacional).
 
+## Documentação completa
+
+Toda a documentação técnica detalhada está em **[doc/](./doc/README.md)** (instalação, backend, frontend, banco, testes, Docker, segurança e fases).
+
 ## Stack
 
 | Camada | Tecnologias |
