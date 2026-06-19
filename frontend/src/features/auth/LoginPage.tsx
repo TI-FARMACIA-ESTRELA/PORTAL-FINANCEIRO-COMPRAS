@@ -7,7 +7,7 @@ import {
   EyeIcon,
   EyeSlashIcon,
 } from '@heroicons/react/24/outline';
-import { LoadingSpinner } from '@/components';
+import { LoadingSpinner, EstrelaLogo } from '@/components';
 import { extractApiError } from '@/services/api/client';
 import { useAuth } from './authContext';
 
@@ -71,13 +71,8 @@ export function LoginPage() {
 
       <div className="relative z-10 w-full max-w-md rounded-2xl bg-white p-8 shadow-2xl sm:p-10">
         <div className="flex flex-col items-center">
-          <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary-600 text-white shadow-lg">
-            <svg viewBox="0 0 24 24" className="h-8 w-8" fill="none" stroke="currentColor">
-              <path d="M12 4v16M4 12h16" strokeWidth="2.5" strokeLinecap="round" />
-            </svg>
-          </span>
-          <h1 className="mt-4 text-xl font-bold text-gray-900">Portal Financeiro Comercial</h1>
-          <p className="mt-1 text-sm text-gray-500">Farmácia Estrela</p>
+          <EstrelaLogo className="h-16 w-auto max-w-[280px]" />
+          <h1 className="mt-5 text-xl font-bold text-gray-900">Portal Financeiro Estrela</h1>
         </div>
 
         <form className="mt-8 space-y-5" onSubmit={handleSubmit}>

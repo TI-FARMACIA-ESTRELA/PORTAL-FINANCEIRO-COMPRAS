@@ -15,6 +15,7 @@ export { Pagination } from './Pagination';
 export { LoadingSpinner } from './LoadingSpinner';
 export { EmptyState } from './EmptyState';
 export { DateInput } from './DateInput';
+export { EstrelaLogo } from './EstrelaLogo';
 export { MoneyInput } from './MoneyInput';
 export { Select, type SelectOption } from './Select';
 export { TextArea } from './TextArea';

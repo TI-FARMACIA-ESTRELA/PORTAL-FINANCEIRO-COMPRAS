@@ -33,7 +33,7 @@ function resolveTitle(pathname: string) {
   const match = [...PAGE_TITLES]
     .sort((a, b) => b.prefix.length - a.prefix.length)
     .find((entry) => pathname.startsWith(entry.prefix));
-  return match ?? { title: 'Portal Financeiro', breadcrumb: undefined };
+  return match ?? { title: 'Portal Financeiro Estrela', breadcrumb: undefined };
 }
 
 export function MainLayout() {

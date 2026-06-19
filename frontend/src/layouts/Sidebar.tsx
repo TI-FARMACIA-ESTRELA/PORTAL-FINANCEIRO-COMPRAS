@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { EstrelaLogo } from '@/components';
 import { XMarkIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import toast from 'react-hot-toast';
 import { cn } from '@/utils/cn';
@@ -26,16 +27,11 @@ function SidebarContent({ user, onNavigate }: { user: AuthUser; onNavigate?: () 
 
   return (
     <div className="flex h-full flex-col bg-sidebar">
-      <div className="flex h-16 flex-none items-center gap-2 px-5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-600 text-white">
-          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor">
-            <path d="M12 5v14M5 12h14" strokeWidth="2.5" strokeLinecap="round" />
-          </svg>
-        </span>
-        <div className="leading-tight">
-          <p className="text-sm font-semibold text-white">Portal Financeiro</p>
-          <p className="text-[11px] text-slate-400">Farmácia Estrela</p>
-        </div>
+      <div className="flex flex-none flex-col items-center gap-2 border-b border-white/10 px-4 py-4">
+        <EstrelaLogo className="h-10 w-full max-w-[210px]" />
+        <p className="text-center text-xs font-semibold leading-snug text-white">
+          Portal Financeiro Estrela
+        </p>
       </div>
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">

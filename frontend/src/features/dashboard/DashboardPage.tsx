@@ -10,6 +10,7 @@ import {
   CalendarDaysIcon,
   CheckCircleIcon,
   ChartBarIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline';
 import {
   Card,
@@ -121,21 +122,21 @@ export function DashboardPage() {
           <h2 className="text-xl font-semibold text-gray-900">Dashboard</h2>
           <p className="mt-1 text-sm text-gray-500">Visão geral financeira comercial</p>
         </div>
-        <div className="flex flex-wrap gap-2 text-sm">
+        <div className="flex flex-wrap items-center gap-2">
           <ExportButtons
             showCsv={false}
             onExportXlsx={() => exportDashboard(filters)}
           />
-          <span className="hidden text-gray-300 sm:inline">·</span>
-          <Link to="/lancamentos" className="text-primary-600 hover:underline">
+          <Link to="/lancamentos" className="btn-secondary text-sm">
+            <BanknotesIcon className="h-4 w-4" />
             Lançamentos
           </Link>
-          <span className="text-gray-300">·</span>
-          <Link to="/recebimentos" className="text-primary-600 hover:underline">
+          <Link to="/recebimentos" className="btn-secondary text-sm">
+            <ArrowDownTrayIcon className="h-4 w-4" />
             Recebimentos
           </Link>
-          <span className="text-gray-300">·</span>
-          <Link to="/conta-corrente" className="text-primary-600 hover:underline">
+          <Link to="/conta-corrente" className="btn-secondary text-sm">
+            <WalletIcon className="h-4 w-4" />
             Conta corrente
           </Link>
         </div>
