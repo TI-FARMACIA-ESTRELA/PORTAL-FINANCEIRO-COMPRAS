@@ -1,0 +1,70 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pfc_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-portal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-portal_dev_password}
+      POSTGRES_DB: ${POSTGRES_DB:-portal_financeiro}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-portal} -d ${POSTGRES_DB:-portal_financeiro}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+    container_name: pfc_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      BACKEND_PORT: 3000
+      DATABASE_URL: ${DATABASE_URL:-postgresql://portal:portal_dev_password@db:5432/portal_financeiro?schema=public}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
+      COOKIE_DOMAIN: ${COOKIE_DOMAIN:-localhost}
+      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-de-access-token}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-15m}
+      REFRESH_TOKEN_SECRET: ${REFRESH_TOKEN_SECRET:-troque-este-segredo-de-refresh-token}
+      REFRESH_TOKEN_EXPIRES_IN: ${REFRESH_TOKEN_EXPIRES_IN:-7d}
+      UPLOADS_DIR: /data/uploads
+      RECEIPTS_AUTO_CONFIRM: ${RECEIPTS_AUTO_CONFIRM:-false}
+      THROTTLE_LIMIT: ${THROTTLE_LIMIT:-100}
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - uploads_data:/data/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # URL pública da API acessível pelo navegador (não use hostname interno do Docker).
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    container_name: pfc_frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+
+volumes:
+  db_data:
+    driver: local
+  uploads_data:
+    driver: local

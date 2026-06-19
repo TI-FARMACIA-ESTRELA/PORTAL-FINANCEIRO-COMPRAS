@@ -1,0 +1,423 @@
+// ==========================================================
+// Portal Financeiro Comercial - Prisma schema
+// FASE 2: autenticação, usuários e permissões.
+// FASE 3: auditoria base (audit_logs append-only).
+// FASE 4: cadastros auxiliares (suppliers, action_types, receipt_methods).
+// FASE 5: lançamentos / contas a receber (receivables).
+// FASE 6: recebimentos / baixas (receivable_receipts).
+// FASE 7: conta corrente comercial (current_accounts + shares + movements).
+// FASE 8: integração recebimentos <-> conta corrente (vínculos bidirecionais).
+// Os demais modelos (attachments, notifications) serão adicionados nas fases
+// seguintes.
+// ==========================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COMPRADOR
+  DIRETORIA
+}
+
+enum SupplierType {
+  INDUSTRIA
+  LABORATORIO
+  DISTRIBUIDOR
+  FORNECEDOR
+  OUTRO
+}
+
+enum FinancialStatus {
+  ABERTO
+  PARCIAL
+  QUITADO
+  CANCELADO
+}
+
+enum ReceiptType {
+  INTEGRAL
+  PARCIAL
+}
+
+enum DestinationType {
+  BAIXA_SIMPLES
+  CREDITO_CONTA_CORRENTE
+}
+
+enum ConfirmationStatus {
+  PENDENTE_CONFIRMACAO
+  CONFIRMADO
+  ESTORNADO
+  CANCELADO
+}
+
+enum MovementType {
+  ENTRADA
+  SAIDA
+  AJUSTE_POSITIVO
+  AJUSTE_NEGATIVO
+  ESTORNO
+}
+
+model User {
+  id           String    @id @default(uuid())
+  userNumber   Int       @unique @map("user_number")
+  name         String
+  email        String?   @unique
+  passwordHash String    @map("password_hash")
+  role         Role      @default(COMPRADOR)
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  auditLogs AuditLog[]
+
+  receivablesAsBuyer  Receivable[] @relation("ReceivableBuyer")
+  receivablesCreated  Receivable[] @relation("ReceivableCreatedBy")
+  receivablesUpdated  Receivable[] @relation("ReceivableUpdatedBy")
+  receivablesCanceled Receivable[] @relation("ReceivableCanceledBy")
+
+  receiptsConfirmed ReceivableReceipt[] @relation("ReceiptConfirmedBy")
+  receiptsReversed  ReceivableReceipt[] @relation("ReceiptReversedBy")
+  receiptsCreated   ReceivableReceipt[] @relation("ReceiptCreatedBy")
+  receiptsUpdated   ReceivableReceipt[] @relation("ReceiptUpdatedBy")
+
+  currentAccountsOwned   CurrentAccount[]     @relation("CurrentAccountOwner")
+  currentAccountsCreated CurrentAccount[]     @relation("CurrentAccountCreatedBy")
+  currentAccountsUpdated CurrentAccount[]     @relation("CurrentAccountUpdatedBy")
+  currentAccountShares   CurrentAccountUser[] @relation("CurrentAccountShareUser")
+  caMovementsCreated     CurrentAccountMovement[] @relation("CaMovementCreatedBy")
+  caMovementsUpdated     CurrentAccountMovement[] @relation("CaMovementUpdatedBy")
+  caMovementsReversed    CurrentAccountMovement[] @relation("CaMovementReversedBy")
+
+  notifications Notification[]
+
+  @@map("users")
+}
+
+// Auditoria append-only: registros nunca são editados ou removidos via API.
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?  @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  oldValues  Json?    @map("old_values")
+  newValues  Json?    @map("new_values")
+  reason     String?
+  ipAddress  String?  @map("ip_address")
+  userAgent  String?  @map("user_agent")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// Cadastros auxiliares (Fase 4). Inativação lógica via is_active; nunca há exclusão física.
+
+// Fornecedores / laboratórios / indústrias / distribuidores.
+model Supplier {
+  id           String       @id @default(uuid())
+  tradeName    String       @map("trade_name")
+  legalName    String?      @map("legal_name")
+  // CNPJ armazenado apenas com dígitos (14). Nullable + @unique gera, no
+  // PostgreSQL, índice único que ignora NULLs (equivale a unique parcial).
+  cnpj         String?      @unique
+  supplierType SupplierType @map("supplier_type")
+  notes        String?
+  isActive     Boolean      @default(true) @map("is_active")
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
+
+  receivables     Receivable[]
+  currentAccounts CurrentAccount[]
+
+  @@index([isActive])
+  @@index([supplierType])
+  @@map("suppliers")
+}
+
+// Descrições de ação comercial (motivos de lançamento).
+model ActionType {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  receivables             Receivable[]
+  currentAccountMovements CurrentAccountMovement[]
+
+  @@index([isActive])
+  @@map("action_types")
+}
+
+// Formas de recebimento / baixa.
+model ReceiptMethod {
+  id                     String   @id @default(uuid())
+  name                   String   @unique
+  description            String?
+  isCurrentAccountCredit Boolean  @default(false) @map("is_current_account_credit")
+  isActive               Boolean  @default(true) @map("is_active")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
+
+  receipts                ReceivableReceipt[]
+  currentAccountMovements CurrentAccountMovement[]
+
+  @@index([isActive])
+  @@map("receipt_methods")
+}
+
+// Lançamentos / contas a receber (Fase 5). Nunca há exclusão física:
+// cancelamento é lógico (financial_status = CANCELADO + campos de cancelamento).
+// due_status NÃO é persistido: é sempre calculado em leitura (services/UI).
+model Receivable {
+  id                  String          @id @default(uuid())
+  negotiationDate     DateTime        @map("negotiation_date") @db.Date
+  competenceMonth     String          @map("competence_month") // AAAA-MM
+  expectedReceiptDate DateTime        @map("expected_receipt_date") @db.Date
+  supplierId          String          @map("supplier_id")
+  actionTypeId        String          @map("action_type_id")
+  buyerId             String          @map("buyer_id")
+  amount              Decimal         @db.Decimal(14, 2)
+  notes               String?
+  financialStatus     FinancialStatus @default(ABERTO) @map("financial_status")
+  canceledAt          DateTime?       @map("canceled_at")
+  canceledBy          String?         @map("canceled_by")
+  cancelReason        String?         @map("cancel_reason")
+  createdBy           String          @map("created_by")
+  updatedBy           String?         @map("updated_by")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  updatedAt           DateTime        @updatedAt @map("updated_at")
+
+  supplier   Supplier   @relation(fields: [supplierId], references: [id])
+  actionType ActionType @relation(fields: [actionTypeId], references: [id])
+  buyer      User       @relation("ReceivableBuyer", fields: [buyerId], references: [id])
+  creator    User       @relation("ReceivableCreatedBy", fields: [createdBy], references: [id])
+  updater    User?      @relation("ReceivableUpdatedBy", fields: [updatedBy], references: [id])
+  canceler   User?      @relation("ReceivableCanceledBy", fields: [canceledBy], references: [id])
+  receipts   ReceivableReceipt[]
+  currentAccountMovements CurrentAccountMovement[]
+
+  @@index([buyerId])
+  @@index([supplierId])
+  @@index([actionTypeId])
+  @@index([competenceMonth])
+  @@index([expectedReceiptDate])
+  @@index([financialStatus])
+  @@index([createdAt])
+  @@map("receivables")
+}
+
+// Recebimentos / baixas (Fase 6). Nunca há exclusão física: o estorno é lógico
+// (original vira ESTORNADO + registro espelho de estorno com reversal_of_receipt_id).
+// Apenas recebimentos CONFIRMADO e não estornados entram no saldo do lançamento.
+model ReceivableReceipt {
+  id                 String             @id @default(uuid())
+  receivableId       String             @map("receivable_id")
+  receiptDate        DateTime           @map("receipt_date") @db.Date
+  receiptMethodId    String             @map("receipt_method_id")
+  amount             Decimal            @db.Decimal(14, 2)
+  receiptType        ReceiptType        @map("receipt_type")
+  destinationType    DestinationType    @default(BAIXA_SIMPLES) @map("destination_type")
+  confirmationStatus ConfirmationStatus @default(PENDENTE_CONFIRMACAO) @map("confirmation_status")
+  confirmedAt        DateTime?          @map("confirmed_at")
+  confirmedBy        String?            @map("confirmed_by")
+  notes              String?
+  isReversed         Boolean            @default(false) @map("is_reversed")
+  reversedAt         DateTime?          @map("reversed_at")
+  reversedBy         String?            @map("reversed_by")
+  reverseReason      String?            @map("reverse_reason")
+  reversalOfReceiptId String?           @map("reversal_of_receipt_id")
+  // Integração conta corrente (Fase 8).
+  currentAccountId         String? @map("current_account_id")
+  currentAccountMovementId String? @unique @map("current_account_movement_id")
+  createdBy          String             @map("created_by")
+  updatedBy          String?            @map("updated_by")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  receivable    Receivable         @relation(fields: [receivableId], references: [id])
+  receiptMethod ReceiptMethod      @relation(fields: [receiptMethodId], references: [id])
+  confirmer     User?              @relation("ReceiptConfirmedBy", fields: [confirmedBy], references: [id])
+  reverser      User?              @relation("ReceiptReversedBy", fields: [reversedBy], references: [id])
+  creator       User               @relation("ReceiptCreatedBy", fields: [createdBy], references: [id])
+  updater       User?              @relation("ReceiptUpdatedBy", fields: [updatedBy], references: [id])
+  reversalOf    ReceivableReceipt? @relation("ReceiptReversal", fields: [reversalOfReceiptId], references: [id])
+  reversals     ReceivableReceipt[] @relation("ReceiptReversal")
+  currentAccount         CurrentAccount?         @relation(fields: [currentAccountId], references: [id])
+  currentAccountMovement CurrentAccountMovement? @relation("ReceiptToMovement", fields: [currentAccountMovementId], references: [id])
+  movementFromReceipt    CurrentAccountMovement? @relation("MovementToReceipt")
+
+  @@index([receivableId])
+  @@index([currentAccountId])
+  @@index([receiptDate])
+  @@index([receiptMethodId])
+  @@index([confirmationStatus])
+  @@index([isReversed])
+  @@index([createdBy])
+  @@index([reversalOfReceiptId])
+  @@index([createdAt])
+  @@map("receivable_receipts")
+}
+
+// Conta corrente comercial (Fase 7). Saldo é sempre calculado a partir das
+// movimentações; nunca digitado. Inativação é lógica (is_active). Independente
+// dos recebimentos nesta fase (integração só na Fase 8).
+model CurrentAccount {
+  id          String   @id @default(uuid())
+  supplierId  String   @map("supplier_id")
+  name        String
+  ownerUserId String   @map("owner_user_id")
+  notes       String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdBy   String   @map("created_by")
+  updatedBy   String?  @map("updated_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  supplier  Supplier                 @relation(fields: [supplierId], references: [id])
+  owner     User                     @relation("CurrentAccountOwner", fields: [ownerUserId], references: [id])
+  creator   User                     @relation("CurrentAccountCreatedBy", fields: [createdBy], references: [id])
+  updater   User?                    @relation("CurrentAccountUpdatedBy", fields: [updatedBy], references: [id])
+  shares    CurrentAccountUser[]
+  movements CurrentAccountMovement[]
+  receipts  ReceivableReceipt[]
+
+  @@index([supplierId])
+  @@index([ownerUserId])
+  @@index([isActive])
+  @@index([createdAt])
+  @@map("current_accounts")
+}
+
+// Compartilhamento de conta corrente com outros usuários (permissões granulares).
+model CurrentAccountUser {
+  id               String   @id @default(uuid())
+  currentAccountId String   @map("current_account_id")
+  userId           String   @map("user_id")
+  canView          Boolean  @default(true) @map("can_view")
+  canMove          Boolean  @default(false) @map("can_move")
+  canEdit          Boolean  @default(false) @map("can_edit")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  currentAccount CurrentAccount @relation(fields: [currentAccountId], references: [id], onDelete: Cascade)
+  user           User           @relation("CurrentAccountShareUser", fields: [userId], references: [id])
+
+  @@unique([currentAccountId, userId])
+  @@index([currentAccountId])
+  @@index([userId])
+  @@map("current_account_users")
+}
+
+// Movimentações da conta corrente. Nunca há exclusão física: estorno é lógico
+// (original marcado is_reversed + movimento ESTORNO com sinal inverso).
+model CurrentAccountMovement {
+  id                   String       @id @default(uuid())
+  currentAccountId     String       @map("current_account_id")
+  type                 MovementType
+  movementDate         DateTime     @map("movement_date") @db.Date
+  amount               Decimal      @db.Decimal(14, 2)
+  receiptMethodId      String?      @map("receipt_method_id")
+  actionTypeId         String?      @map("action_type_id")
+  description          String?
+  notes                String?
+  isReversed           Boolean      @default(false) @map("is_reversed")
+  reversedAt           DateTime?    @map("reversed_at")
+  reversedBy           String?      @map("reversed_by")
+  reverseReason        String?      @map("reverse_reason")
+  reversalOfMovementId String?      @map("reversal_of_movement_id")
+  // Vínculo com recebimentos (Fase 8).
+  receivableId        String? @map("receivable_id")
+  receivableReceiptId String? @unique @map("receivable_receipt_id")
+  createdBy            String       @map("created_by")
+  updatedBy            String?      @map("updated_by")
+  createdAt            DateTime     @default(now()) @map("created_at")
+  updatedAt            DateTime     @updatedAt @map("updated_at")
+
+  currentAccount CurrentAccount          @relation(fields: [currentAccountId], references: [id])
+  receiptMethod  ReceiptMethod?          @relation(fields: [receiptMethodId], references: [id])
+  actionType     ActionType?             @relation(fields: [actionTypeId], references: [id])
+  reverser       User?                   @relation("CaMovementReversedBy", fields: [reversedBy], references: [id])
+  creator        User                    @relation("CaMovementCreatedBy", fields: [createdBy], references: [id])
+  updater        User?                   @relation("CaMovementUpdatedBy", fields: [updatedBy], references: [id])
+  reversalOf     CurrentAccountMovement? @relation("CaMovementReversal", fields: [reversalOfMovementId], references: [id])
+  reversals      CurrentAccountMovement[] @relation("CaMovementReversal")
+  receivable        Receivable?        @relation(fields: [receivableId], references: [id])
+  receiptFromMovement ReceivableReceipt? @relation("ReceiptToMovement")
+  linkedReceipt     ReceivableReceipt? @relation("MovementToReceipt", fields: [receivableReceiptId], references: [id])
+
+  @@index([currentAccountId])
+  @@index([receivableId])
+  @@index([receivableReceiptId])
+  @@index([movementDate])
+  @@index([type])
+  @@index([isReversed])
+  @@index([reversalOfMovementId])
+  @@index([createdBy])
+  @@index([createdAt])
+  @@map("current_account_movements")
+}
+
+enum NotificationType {
+  RECEIVABLE_OVERDUE
+  RECEIVABLE_DUE_TODAY
+  RECEIVABLE_DUE_SOON
+  RECEIPT_PENDING_CONFIRMATION
+  RECEIPT_REGISTERED
+  RECEIPT_CONFIRMED
+  RECEIPT_REVERSED
+  CURRENT_ACCOUNT_NEGATIVE
+  CURRENT_ACCOUNT_SHARED
+  CURRENT_ACCOUNT_SHARED_MOVEMENT
+  CURRENT_ACCOUNT_MOVEMENT_REVERSED
+}
+
+enum NotificationSeverity {
+  INFO
+  WARNING
+  DANGER
+  SUCCESS
+}
+
+// Notificações in-app (Fase 10). Sem exclusão física nesta fase.
+model Notification {
+  id         String               @id @default(uuid())
+  userId     String               @map("user_id")
+  type       NotificationType
+  title      String
+  message    String
+  entityType String?              @map("entity_type")
+  entityId   String?              @map("entity_id")
+  severity   NotificationSeverity
+  metadata   Json?
+  dedupKey   String?              @map("dedup_key")
+  readAt     DateTime?            @map("read_at")
+  createdAt  DateTime             @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, dedupKey])
+  @@index([userId])
+  @@index([readAt])
+  @@index([createdAt])
+  @@index([type])
+  @@index([entityType, entityId])
+  @@map("notifications")
+}
