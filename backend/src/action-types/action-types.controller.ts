@@ -20,7 +20,7 @@ export class ActionTypesController {
   constructor(private readonly service: ActionTypesService) {}
 
   @Get()
-  @Roles(Role.ADMIN, Role.DIRETORIA)
+  @Roles(Role.ADMIN, Role.COMPRADOR, Role.DIRETORIA)
   list(@Query() query: PaginationQueryDto) {
     return this.service.list(query);
   }
@@ -31,13 +31,13 @@ export class ActionTypesController {
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.DIRETORIA)
+  @Roles(Role.ADMIN, Role.COMPRADOR, Role.DIRETORIA)
   findOne(@Param('id') id: string) {
     return this.service.findById(id);
   }
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.COMPRADOR, Role.DIRETORIA)
   create(
     @Body() dto: CreateActionTypeDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -47,7 +47,7 @@ export class ActionTypesController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.COMPRADOR, Role.DIRETORIA)
   update(
     @Param('id') id: string,
     @Body() dto: UpdateActionTypeDto,
@@ -58,7 +58,7 @@ export class ActionTypesController {
   }
 
   @Patch(':id/active')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.COMPRADOR, Role.DIRETORIA)
   setActive(
     @Param('id') id: string,
     @Body() dto: SetActiveDto,

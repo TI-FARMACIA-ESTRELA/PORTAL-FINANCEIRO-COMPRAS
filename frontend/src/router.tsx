@@ -31,15 +31,19 @@ export const router = createBrowserRouter([
           { path: '/conta-corrente', element: <CurrentAccountsPage /> },
           { path: '/conta-corrente/:id', element: <CurrentAccountDetailPage /> },
           { path: '/perfil', element: <ProfilePage /> },
-          // Cadastros e auditoria: ADMIN e DIRETORIA
+          // Cadastros: todos os perfis
           {
-            element: <RequireRole allow={['ADMIN', 'DIRETORIA']} />,
+            element: <RequireRole allow={['ADMIN', 'COMPRADOR', 'DIRETORIA']} />,
             children: [
               { path: '/cadastros/fornecedores', element: <SuppliersPage /> },
               { path: '/cadastros/descricoes-acoes', element: <ActionTypesPage /> },
               { path: '/cadastros/formas-recebimento', element: <ReceiptMethodsPage /> },
-              { path: '/admin/auditoria', element: <AuditPage /> },
             ],
+          },
+          // Auditoria: ADMIN e DIRETORIA
+          {
+            element: <RequireRole allow={['ADMIN', 'DIRETORIA']} />,
+            children: [{ path: '/admin/auditoria', element: <AuditPage /> }],
           },
           // Administração de usuários: somente ADMIN
           {

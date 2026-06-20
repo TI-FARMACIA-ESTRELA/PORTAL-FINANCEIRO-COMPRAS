@@ -1,6 +1,14 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+function resolveApiUrl(): string {
+  const configured = import.meta.env.VITE_API_URL;
+  if (import.meta.env.DEV) {
+    return `${window.location.protocol}//${window.location.hostname}:3000`;
+  }
+  return configured ?? 'http://localhost:3000';
+}
+
+const API_URL = resolveApiUrl();
 
 export const api = axios.create({
   baseURL: `${API_URL}/api`,

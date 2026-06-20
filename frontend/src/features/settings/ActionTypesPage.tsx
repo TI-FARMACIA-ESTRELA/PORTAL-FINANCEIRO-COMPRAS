@@ -19,7 +19,6 @@ import {
 } from '@/components';
 import { formatDate } from '@/utils/format';
 import { extractApiError } from '@/services/api/client';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
   listActionTypes,
   createActionType,
@@ -39,8 +38,7 @@ const statusOptions: SelectOption[] = [
 ];
 
 export function ActionTypesPage() {
-  const user = useCurrentUser();
-  const isAdmin = user.role === 'ADMIN';
+  const canManage = true;
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
@@ -149,7 +147,7 @@ export function ActionTypesPage() {
     { key: 'createdAt', header: 'Criado em', render: (a) => formatDate(a.createdAt) },
   ];
 
-  if (isAdmin) {
+  if (canManage) {
     columns.push({
       key: 'actions',
       header: 'Ações',
@@ -194,7 +192,7 @@ export function ActionTypesPage() {
             Motivos comerciais usados nos lançamentos financeiros
           </p>
         </div>
-        {isAdmin ? (
+        {canManage ? (
           <button type="button" className="btn-primary" onClick={openCreate}>
             <PlusIcon className="h-5 w-5" />
             Nova descrição

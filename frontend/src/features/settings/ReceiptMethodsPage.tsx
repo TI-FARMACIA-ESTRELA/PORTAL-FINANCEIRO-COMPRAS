@@ -19,7 +19,6 @@ import {
 } from '@/components';
 import { formatDate } from '@/utils/format';
 import { extractApiError } from '@/services/api/client';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
   listReceiptMethods,
   createReceiptMethod,
@@ -39,8 +38,7 @@ const statusOptions: SelectOption[] = [
 ];
 
 export function ReceiptMethodsPage() {
-  const user = useCurrentUser();
-  const isAdmin = user.role === 'ADMIN';
+  const canManage = true;
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
@@ -159,7 +157,7 @@ export function ReceiptMethodsPage() {
     { key: 'createdAt', header: 'Criado em', render: (m) => formatDate(m.createdAt) },
   ];
 
-  if (isAdmin) {
+  if (canManage) {
     columns.push({
       key: 'actions',
       header: 'Ações',
@@ -204,7 +202,7 @@ export function ReceiptMethodsPage() {
             Formas de baixa e recebimento usadas nas quitações
           </p>
         </div>
-        {isAdmin ? (
+        {canManage ? (
           <button type="button" className="btn-primary" onClick={openCreate}>
             <PlusIcon className="h-5 w-5" />
             Nova forma

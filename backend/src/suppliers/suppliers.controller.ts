@@ -19,9 +19,9 @@ function buildActor(user: AuthenticatedUser, client: ClientInfo): ActorContext {
 export class SuppliersController {
   constructor(private readonly suppliersService: SuppliersService) {}
 
-  // Leitura completa: ADMIN e DIRETORIA.
+  // Leitura e manutenção: todos os perfis autenticados.
   @Get()
-  @Roles(Role.ADMIN, Role.DIRETORIA)
+  @Roles(Role.ADMIN, Role.COMPRADOR, Role.DIRETORIA)
   list(@Query() query: QuerySupplierDto) {
     return this.suppliersService.list(query);
   }
@@ -33,13 +33,13 @@ export class SuppliersController {
   }
 
   @Get(':id')
-  @Roles(Role.ADMIN, Role.DIRETORIA)
+  @Roles(Role.ADMIN, Role.COMPRADOR, Role.DIRETORIA)
   findOne(@Param('id') id: string) {
     return this.suppliersService.findById(id);
   }
 
   @Post()
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.COMPRADOR, Role.DIRETORIA)
   create(
     @Body() dto: CreateSupplierDto,
     @CurrentUser() user: AuthenticatedUser,
@@ -49,7 +49,7 @@ export class SuppliersController {
   }
 
   @Patch(':id')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.COMPRADOR, Role.DIRETORIA)
   update(
     @Param('id') id: string,
     @Body() dto: UpdateSupplierDto,
@@ -60,7 +60,7 @@ export class SuppliersController {
   }
 
   @Patch(':id/active')
-  @Roles(Role.ADMIN)
+  @Roles(Role.ADMIN, Role.COMPRADOR, Role.DIRETORIA)
   setActive(
     @Param('id') id: string,
     @Body() dto: SetActiveDto,

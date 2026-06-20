@@ -19,7 +19,6 @@ import {
 } from '@/components';
 import { formatDate, formatCnpj } from '@/utils/format';
 import { extractApiError } from '@/services/api/client';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
 import {
   listSuppliers,
   createSupplier,
@@ -49,8 +48,7 @@ const typeOptions: SelectOption[] = [
 ];
 
 export function SuppliersPage() {
-  const user = useCurrentUser();
-  const isAdmin = user.role === 'ADMIN';
+  const canManage = true;
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState('');
@@ -166,7 +164,7 @@ export function SuppliersPage() {
     { key: 'createdAt', header: 'Criado em', render: (s) => formatDate(s.createdAt) },
   ];
 
-  if (isAdmin) {
+  if (canManage) {
     columns.push({
       key: 'actions',
       header: 'Ações',
@@ -211,7 +209,7 @@ export function SuppliersPage() {
             Indústrias, laboratórios, distribuidores e fornecedores
           </p>
         </div>
-        {isAdmin ? (
+        {canManage ? (
           <button type="button" className="btn-primary" onClick={openCreate}>
             <PlusIcon className="h-5 w-5" />
             Novo fornecedor
