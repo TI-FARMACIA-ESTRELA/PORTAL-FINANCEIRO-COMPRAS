@@ -13,6 +13,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:seed": "prisma db seed",
+    "validate:production-db": "ts-node scripts/validate-production-db.ts",
     "test:e2e": "node scripts/test-e2e-phase12.mjs"
   },
   "prisma": {

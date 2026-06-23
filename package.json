@@ -8,6 +8,11 @@
     "frontend"
   ],
   "scripts": {
+    "pg:start": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-postgres.ps1",
+    "pg:stop": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/stop-postgres.ps1",
+    "pg:validate": "npm run validate:production-db --workspace backend",
+    "start": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/start-dev.ps1",
+    "stop": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/stop-dev.ps1",
     "dev:backend": "npm run start:dev --workspace backend",
     "dev:frontend": "npm run dev --workspace frontend",
     "build:backend": "npm run build --workspace backend",
